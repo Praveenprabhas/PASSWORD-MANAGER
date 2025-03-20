@@ -1,0 +1,79 @@
+from tabulate import tabulate  --  this is used for showing the output in table formate in output terminal
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) -- this is used for the connect the path from the importing the pyhton file from one folder to the another folder.
+
+
+
+after login it should store the  _id  so we can identify the user and keep control over user data
+
+
+Got it! If you want each user to only have control over their own data, you can implement an ownership system. Here's how you can approach it:
+
+1. **Store Ownership in the Database**:
+   - When users register, associate their data with their unique identifier (e.g., `user_id` or `username`).
+
+   Example user data in the database:
+   ```json
+   {
+       "user_id": "user123",
+       "username": "example_user",
+       "password": "hashed_password",
+       "data": [
+           {"record_id": "1", "info": "Data 1"},
+           {"record_id": "2", "info": "Data 2"}
+       ]
+   }
+   ```
+
+2. **Authenticate Users**:
+   - Use a login system to authenticate users and retrieve their unique identifier upon successful login.
+
+3. **Restrict Data Access**:
+   - When performing database operations, filter the data by the user's unique identifier. This ensures users can only view, modify, or delete their own data.
+
+4. **Example Code**:
+   Here's an example implementation:
+
+   ```python
+   class UserDataManager:
+       def __init__(self, user_id):
+           self.user_id = user_id
+
+       def view_data(self):
+           user_data = db_name.users.find_one({"user_id": self.user_id})
+           if user_data and "data" in user_data:
+               print("Your Data:")
+               for record in user_data["data"]:
+                   print(record)
+           else:
+               print("No data found.")
+
+       def add_data(self):
+           new_info = input("Enter new data: ")
+           db_name.users.update_one(
+               {"user_id": self.user_id},
+               {"$push": {"data": {"record_id": str(uuid.uuid4()), "info": new_info}}}
+           )
+           print("Data added successfully.")
+
+       def delete_data(self):
+           record_id = input("Enter the record ID to delete: ")
+           db_name.users.update_one(
+               {"user_id": self.user_id},
+               {"$pull": {"data": {"record_id": record_id}}}
+           )
+           print("Data deleted successfully.")
+
+   # Example Usage
+   logged_in_user_id = "user123"  # This would be retrieved during login
+   user_manager = UserDataManager(logged_in_user_id)
+   user_manager.view_data()
+   user_manager.add_data()
+   user_manager.delete_data()
+   ```
+
+### Explanation:
+- The `UserDataManager` class restricts operations to data owned by the logged-in user.
+- The `view_data`, `add_data`, and `delete_data` methods interact only with data associated with the `user_id`.
+
+Would you like me to help expand on this or integrate it with your existing system?

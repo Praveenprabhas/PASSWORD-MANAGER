@@ -1,0 +1,37 @@
+
+import sys
+import os
+
+# Add project root directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from db.db_connect import db_name  # Now it should work
+
+import bcrypt
+
+user = db_name['users']
+print("Create an account :-")
+
+while True:
+    usersname = input("Username: ").strip()
+
+    if not usersname:
+        print("\nUsername cannot be empty.\n")
+        continue
+
+    if user.find_one({"username": usersname}):
+        print("\nUsername already exists.\n")
+        continue
+
+    password = input("Password: ").strip()
+
+    if not password:
+        print("\nPassword cannot be empty.\n")
+        continue
+
+    # Hashing the password before storing
+    hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+    user.insert_one({"username": usersname, "password": hashed_password})
+    print("\nAccount created successfully.\n")
+    break
