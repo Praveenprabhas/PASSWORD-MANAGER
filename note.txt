@@ -199,3 +199,39 @@ while True:
                 break
 
 
+import uuid
+import sys
+import os
+
+# Add project root directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from db.db_connect import db_name  # Now it should work
+
+user = db_name['users']
+print("Create an account :-")
+while True:
+    usersname = input("username : ")
+    username = usersname  # assign the input to the variable
+
+    if len(username) == 0:  # corrected the condition
+        print("\nusername is empty.\n")
+    elif user.find_one({"username": usersname}):  # Check if username already exists
+        print("\nusername already exists.\n")
+    else:
+        password = input("password : ")
+        password = password  # assign the input to the variable
+        if password == "":
+            print("\npassword is empty.\n")
+        else:
+            try:
+                # Generate a unique ID for the user
+                user_id = str(uuid.uuid4())
+
+                # Insert user data with the unique ID
+                user.insert_one({"_id": user_id, "username": usersname, "password": password})
+                print(f"\nAccount created successfully. Your user ID is {user_id}\n")
+                break
+            except Exception as e:
+                # Handle any exceptions (e.g., duplicate IDs)
+                print(f"\nAn error occurred: {e}\n")
