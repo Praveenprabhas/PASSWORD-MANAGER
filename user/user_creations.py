@@ -1,3 +1,4 @@
+import random
 import sys
 import os
 
@@ -22,10 +23,22 @@ while True:
         password = password  # assign the input to the variable
         if password == "":
                 print("\npassword is empty.\n")
-        else:       
-                
-                user.insert_one({"username": usersname, "password": password})
-                print("\nAccount created successfully.\n")
+        else:   
+                while True :    
+                    numbers = "0123456789"
+                    capital_letters = "ABCDEF"
+                    small_letters = "abcdef"
+                    symbols = "-"
+                    all_characters = numbers + capital_letters + small_letters + symbols
+                    random_string = ''.join(random.choice(all_characters) for _ in range(6))
+                    uuid=random_string
+                    # print("Random String:", random_string)
+                    if user.find_one({"_id": uuid}):
+                        continue
+                    else:             
+                        user.insert_one({"_id": uuid,"username": usersname, "password": password})
+                        print("\nAccount created successfully.\n")
+                        break
                 break
         
 

@@ -235,3 +235,26 @@ while True:
             except Exception as e:
                 # Handle any exceptions (e.g., duplicate IDs)
                 print(f"\nAn error occurred: {e}\n")
+
+
+
+
+for random Generating unique identifier :-
+
+import random
+
+# Define the characters to choose from
+numbers = "0123456789"
+capital_letters = "ABCDEF"
+# capital_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+small_letters = "abcdef"
+# small_letters = "abcdefghijklmnopqrstuvwxyz"
+symbols = "-"
+# symbols = "!@#$%^&*()"
+
+# Combine all characters
+all_characters = numbers + capital_letters + small_letters + symbols
+
+# Generate a random string of length 6
+random_string = ''.join(random.choice(all_characters) for _ in range(6))
+print("Random String:", random_string)
