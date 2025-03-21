@@ -2,25 +2,24 @@ import random
 import sys
 import os
 
-# Add project root directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from db.db_connect import db_name  # Now it should work
+from db.db_connect import db_name 
 
 
 user = db_name['users']
 print("Create a account :-")
 while True:
-    usersname = input("username : ")
-    username = usersname  # assign the input to the variable
+    usersname = input("username : ").strip()
+    username = usersname 
 
-    if len(username) == 0:  # corrected the condition
+    if len(username) == 0:
         print("\nusername is empty.\n")
-    elif user.find_one({"username": usersname}):  # corrected the find_one method
+    elif user.find_one({"username": usersname}):
         print("\nusername already exists.\n")
     else:
-        password = input("password : ")
-        password = password  # assign the input to the variable
+        password = input("password : ").strip()
+        password = password 
         if password == "":
                 print("\npassword is empty.\n")
         else:   
