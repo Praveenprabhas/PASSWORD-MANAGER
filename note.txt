@@ -258,3 +258,44 @@ all_characters = numbers + capital_letters + small_letters + symbols
 # Generate a random string of length 6
 random_string = ''.join(random.choice(all_characters) for _ in range(6))
 print("Random String:", random_string)
+
+
+
+users_list.py(lastone):-
+
+import sys
+import os
+from tabulate import tabulate  # Ensure you install this library: pip install tabulate
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from db.db_connect import db_name
+
+# Assuming db_name['users'] is a MongoDB collection
+user_collection = db_name['users']
+
+# Fetch the data
+data = []
+for user in user_collection.find({}, {'sno': 1, 'username': 1, 'password': 1, '_id': 0}):  # Get specific fields
+    data.append([user['sno'], user['username'], user['password']])
+
+# Print in table format
+headers = ["Sno", "Username", "Password"]
+print(tabulate(data, headers, tablefmt="grid"))
+
+
+
+
+# Get input from the user
+username = input("Enter the username: ").strip()  # .strip() removes any extra spaces
+
+# Check if the input is empty
+if not username:  # This checks for empty strings or spaces
+    print("Input cannot be empty. Please enter a valid username.")
+else:
+    # Perform your user existence check here
+    user = user_collection.find_one({"username": username})
+    if user is None:
+        print(f"User '{username}' does not exist.")
+    else:
+        print(f"User '{username}' already exists.")

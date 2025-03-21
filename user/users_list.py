@@ -11,9 +11,18 @@ user_collection = db_name['users']
 
 # Fetch the data
 data = []
-for user in user_collection.find({}, {'sno': 1, 'username': 1, 'password': 1, '_id': 0}):  # Get specific fields
-    data.append([user['sno'], user['username'], user['password']])
+sno = 1  # Initialize serial number
+for user in user_collection.find({}, {'username': 1, 'password': 1, '_id': 0}):  # Fetch only relevant fields
+    data.append([
+        sno,                             # Assign serial number
+        user.get('username', 'N/A'),     # Default to 'N/A' if 'username' is missing
+        user.get('password', 'N/A')      # Default to 'N/A' if 'password' is missing
+    ])
+    sno += 1  # Increment the serial number
 
 # Print in table format
 headers = ["Sno", "Username", "Password"]
 print(tabulate(data, headers, tablefmt="grid"))
+
+# Print total number of users
+print(f"\nTotal Number of Users: {len(data)}")
