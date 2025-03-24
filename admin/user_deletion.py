@@ -45,8 +45,11 @@ class UserDeletion:
             else:
                 print("Incorrect password.")
 
-    def __init__(self):
+    def manage(self):
         self.view_users()
         self.verify()
+
+    def __init__(self):
+        pass
 
 delete = UserDeletion()

@@ -58,7 +58,8 @@ class AdminPanel:
     def manage_user_deletions(self):
         print("\n--- Manage User Deletions ---")
         try:
-            user_deletion = UserDeletion()  # Instantiate and use the UserDeletion class
+            user_deletion = UserDeletion()  # Instantiate the UserDeletion class
+            user_deletion.manage()  # Call the manage method
         except Exception as e:
             print(f"An error occurred: {e}")
 
