@@ -2,7 +2,7 @@ import sys
 import os
 import bcrypt
 import re
-from datetime import datetime, timezone
+from datetime import datetime 
 
 # Add parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -62,7 +62,7 @@ while True:
         "username": username,
         "email": email,
         "password_hash": hashed_password,
-        "created_at": datetime.now(timezone.utc)  # Timezone-aware datetime
+        "created_at": datetime.utcnow()
     }
 
     user_collection.insert_one(user_data)

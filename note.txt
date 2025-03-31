@@ -299,3 +299,747 @@ else:
         print(f"User '{username}' does not exist.")
     else:
         print(f"User '{username}' already exists.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+You need to update your user creation logic to include additional fields such as `email`, `password_hash`, and `created_at`. Also, it's best practice to **hash passwords** before storing them instead of saving them as plain text.  
+
+Here’s the improved version of your code:  
+
+### **Updated User Creation Code**
+```python
+import random
+import sys
+import os
+import hashlib
+from datetime import datetime
+from bson.objectid import ObjectId
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from db.db_connect import db_name  
+
+user_collection = db_name['users']
+
+print("Create an account :-")
+
+while True:
+    username = input("Username: ").strip()
+
+    if not username:
+        print("\nUsername cannot be empty.\n")
+        continue
+
+    if user_collection.find_one({"username": username}):
+        print("\nUsername already exists. Try another.\n")
+        continue
+
+    email = input("Email: ").strip()
+    if not email:
+        print("\nEmail cannot be empty.\n")
+        continue
+
+    if user_collection.find_one({"email": email}):
+        print("\nEmail already registered.\n")
+        continue
+
+    password = input("Password: ").strip()
+    if not password:
+        print("\nPassword cannot be empty.\n")
+        continue
+
+    # Hash password before storing
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+    # Generate a unique user ID
+    while True:
+        uuid = ObjectId()  # MongoDB ObjectId is unique
+        if not user_collection.find_one({"_id": uuid}):
+            break
+
+    # Insert user into the database
+    user_data = {
+        "_id": uuid,
+        "username": username,
+        "email": email,
+        "password_hash": password_hash,  # Store hashed password
+        "created_at": datetime.utcnow()  # Store creation time
+    }
+
+    user_collection.insert_one(user_data)
+    print("\nAccount created successfully.\n")
+    break
+```
+
+---
+
+### **Key Improvements:**
+✅ **Email Field Added** → Now users must enter an email.  
+✅ **Password Hashing** → Uses SHA-256 for security.  
+✅ **Unique User ID** → Uses `ObjectId()` instead of random strings.  
+✅ **Datetime Storage** → Saves `created_at` timestamp for account creation.  
+
+Would you like me to add **password encryption** instead of just hashing? 🔐
+
+
+
+
+Here’s the corrected version of your script to ensure **unique usernames** and **proper database structure**, including an **email field, password hashing**, and a **timestamp**.
+
+---
+
+### **Fixes & Improvements**
+✅ Uses `bcrypt` to **hash passwords** instead of storing them as plain text.  
+✅ Uses MongoDB’s built-in `ObjectId` as `_id` instead of a random string.  
+✅ Ensures `username` and `email` are **unique** before insertion.  
+✅ Adds a `created_at` timestamp.
+
+---
+
+### **Updated Code**
+```python
+import sys
+import os
+import bcrypt
+import re
+from datetime import datetime
+from pymongo import MongoClient
+
+# Add parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Connect to MongoDB
+from db.db_connect import db_name
+user_collection = db_name['users']
+
+def hash_password(password):
+    """Hashes the password using bcrypt"""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode(), salt).decode()
+
+def is_valid_email(email):
+    """Validates email format"""
+    email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return re.match(email_regex, email)
+
+print("Create an account:")
+while True:
+    username = input("Username: ").strip().lower()
+    
+    if not username:
+        print("\nUsername cannot be empty.\n")
+        continue
+
+    # Check if username already exists
+    if user_collection.find_one({"username": username}):
+        print("\nUsername already exists. Try another.\n")
+        continue
+
+    email = input("Email: ").strip().lower()
+
+    if not email:
+        print("\nEmail cannot be empty.\n")
+        continue
+
+    if not is_valid_email(email):
+        print("\nInvalid email format.\n")
+        continue
+
+    # Check if email already exists
+    if user_collection.find_one({"email": email}):
+        print("\nEmail is already registered.\n")
+        continue
+
+    password = input("Password: ").strip()
+
+    if not password:
+        print("\nPassword cannot be empty.\n")
+        continue
+
+    hashed_password = hash_password(password)
+
+    # Insert new user into the database
+    user_data = {
+        "username": username,
+        "email": email,
+        "password_hash": hashed_password,
+        "created_at": datetime.utcnow()
+    }
+
+    user_collection.insert_one(user_data)
+
+    print("\nAccount created successfully!\n")
+    break  # Exit loop after successful registration
+```
+
+---
+
+### **Database Entry Example**
+After running the script, a new user entry will look like this:
+
+```json
+{
+    "_id": ObjectId("65fa1234abcd5678ef901234"),  
+    "username": "krishna",
+    "email": "krishna@example.com",
+    "password_hash": "$2b$12$eImiTXuWVxfM37uY4JANj.ezR7OdJlmJaa0j6/BFJ/fh2rX4OdzV6",
+    "created_at": ISODate("2025-03-25T10:00:00Z")
+}
+```
+
+---
+
+### **Key Enhancements**
+🔹 **Unique Username & Email**: Ensures users cannot register twice.  
+🔹 **Password Hashing**: Encrypts passwords before storing them.  
+🔹 **Email Validation**: Checks for a valid email format.  
+🔹 **ObjectId for `_id`**: Uses MongoDB’s default unique identifier.  
+🔹 **Timestamp**: Logs when the account was created.  
+
+---
+
+### **Next Steps**
+Would you like help adding **login functionality** with password verification? 🚀
+
+
+
+
+
+
+
+
+
+
+
+
+
+Here’s how you can add **OTP expiration time (10 minutes)** and display a countdown timer in the email. I’ll also provide a **detailed explanation** of how the code works.
+
+---
+
+### **✅ Updated Code**
+```python
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import re
+import os
+import random
+import time
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
+
+load_dotenv()
+sender_email = os.getenv("SENDER_EMAIL")
+password = os.getenv("EMAIL_PASSWORD")
+
+def validate_email(email):
+    """Validate email format using regex."""
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(email_regex, email)
+
+def send_email(sender_email, password, receiver_email, html_template):
+    """Send an email with HTML content."""
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = receiver_email
+    msg["Subject"] = "Webtech Password Manager - Email Verification Code"
+    msg.attach(MIMEText(html_template, "html"))
+    try:
+        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp_server.starttls()
+        smtp_server.login(sender_email, password)
+        smtp_server.sendmail(sender_email, receiver_email, msg.as_string())
+        print("Email successfully sent!")
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication Error: Please check your email credentials.")
+    except smtplib.SMTPConnectError:
+        print("Connection Error: Unable to connect to the SMTP server.")
+    except Exception as e:
+        print(f"Error: unable to send email - {str(e)}")
+    finally:
+        smtp_server.quit()
+
+def otp_generator():
+    """Generate a random OTP."""
+    characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    length = 6
+    OTP = "".join(random.sample(characters, length))
+    return OTP
+
+if __name__ == "__main__":
+    sender_email = os.getenv("SENDER_EMAIL")
+    password = os.getenv("EMAIL_PASSWORD")
+
+    if not sender_email or not password:
+        print("Error: Please set the environment variables 'SENDER_EMAIL' and 'EMAIL_PASSWORD'.")
+        exit()
+
+    receiver_email = input("Enter receiver email: ").strip()
+
+    if not validate_email(receiver_email):
+        print("Invalid email format. Please try again.")
+    else:
+        otp = otp_generator()
+        username = receiver_email.split("@")[0]  # Extract username from email
+
+        # OTP expiration time (10 minutes from now)
+        expiration_time = datetime.now() + timedelta(minutes=10)
+        expiration_timestamp = int(expiration_time.timestamp())  # Convert to Unix timestamp
+
+        html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <script>
+        function startCountdown(expirationTime) {{
+            var countdownElement = document.getElementById('countdown');
+            function updateCountdown() {{
+                var currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+                var remainingTime = expirationTime - currentTime;
+                if (remainingTime <= 0) {{
+                    countdownElement.innerHTML = "OTP Expired";
+                    return;
+                }}
+                var minutes = Math.floor(remainingTime / 60);
+                var seconds = remainingTime % 60;
+                countdownElement.innerHTML = "Expires in " + minutes + " min " + seconds + " sec";
+                setTimeout(updateCountdown, 1000);
+            }}
+            updateCountdown();
+        }}
+    </script>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f7; text-align: center; padding: 20px;"
+      onload="startCountdown({expiration_timestamp})">
+    <div style="max-width: 480px; background: #ffffff; padding: 30px; border-radius: 8px; 
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); margin: auto;">
+        <h1 style="color: #333; font-size: 22px;">Email Verification</h1>
+        <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Hello <strong>{username}</strong>,
+        </p>
+        <p style="color: #555; font-size: 16px;">
+            Use the code below to verify your email address:
+        </p>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin: 20px 0;">
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[0]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[1]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[2]}</div>
+
+            <div style="font-size: 28px; font-weight: bold; color: #333;">-</div>
+
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[3]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[4]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[5]}</div>
+        </div>
+
+        <p id="countdown" style="font-size: 14px; color: #d9534f; font-weight: bold;"></p>
+
+        <p style="font-size: 12px; color: #888; margin-top: 20px;">
+            If you did not request this, please ignore this email or contact support.
+        </p>
+    </div>
+</body>
+</html>
+"""
+        send_email(sender_email, password, receiver_email, html_template)
+```
+
+---
+
+### **🔹 Explanation**
+1. **OTP Expiration Time**
+   - We use `datetime.now() + timedelta(minutes=10)` to set the expiration.
+   - `expiration_timestamp` is the **Unix timestamp** (seconds since epoch).
+
+2. **Countdown Timer (JavaScript)**
+   - JavaScript function `startCountdown()` calculates time remaining.
+   - It **updates every second** using `setTimeout(updateCountdown, 1000)`.
+   - If time expires, it changes the text to `"OTP Expired"`.
+
+3. **Email OTP Display**
+   - OTP is shown in **separate boxes** for better visibility.
+   - **Flexbox is used** to properly align the boxes.
+
+---
+
+### **✅ Features Added**
+✔ **10-minute expiration time**  
+✔ **Live countdown timer in email**  
+✔ **OTP displayed in a neat box format**  
+✔ **Better error handling for email sending**  
+
+Now your email **shows the countdown** and **expires after 10 minutes**! 🚀  
+Let me know if you need any modifications! 😊
+
+
+
+The problem is that **most email clients (Gmail, Outlook, Yahoo, etc.) do not support JavaScript** in emails. This means the countdown timer won't work inside the email.
+
+### **🔹 Solution**
+Since JavaScript is blocked in emails, you cannot run a dynamic countdown. Instead, we can **send a static expiration time** along with the OTP.  
+
+✅ **Approach:**  
+- Display the **exact expiration time** in the email instead of a countdown.  
+- Format the expiration time in **HH:MM AM/PM format** for better readability.  
+
+---
+
+### **✅ Fixed Code (Without JavaScript)**
+```python
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import re
+import os
+import random
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
+
+load_dotenv()
+sender_email = os.getenv("SENDER_EMAIL")
+password = os.getenv("EMAIL_PASSWORD")
+
+def validate_email(email):
+    """Validate email format using regex."""
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(email_regex, email)
+
+def send_email(sender_email, password, receiver_email, html_template):
+    """Send an email with HTML content."""
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = receiver_email
+    msg["Subject"] = "Webtech Password Manager - Email Verification Code"
+    msg.attach(MIMEText(html_template, "html"))
+    try:
+        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp_server.starttls()
+        smtp_server.login(sender_email, password)
+        smtp_server.sendmail(sender_email, receiver_email, msg.as_string())
+        print("Email successfully sent!")
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication Error: Please check your email credentials.")
+    except smtplib.SMTPConnectError:
+        print("Connection Error: Unable to connect to the SMTP server.")
+    except Exception as e:
+        print(f"Error: unable to send email - {str(e)}")
+    finally:
+        smtp_server.quit()
+
+def otp_generator():
+    """Generate a random OTP."""
+    characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    length = 6
+    OTP = "".join(random.sample(characters, length))
+    return OTP
+
+if __name__ == "__main__":
+    sender_email = os.getenv("SENDER_EMAIL")
+    password = os.getenv("EMAIL_PASSWORD")
+
+    if not sender_email or not password:
+        print("Error: Please set the environment variables 'SENDER_EMAIL' and 'EMAIL_PASSWORD'.")
+        exit()
+
+    receiver_email = input("Enter receiver email: ").strip()
+
+    if not validate_email(receiver_email):
+        print("Invalid email format. Please try again.")
+    else:
+        otp = otp_generator()
+        username = receiver_email.split("@")[0]  # Extract username from email
+
+        # OTP expiration time (10 minutes from now)
+        expiration_time = datetime.now() + timedelta(minutes=10)
+        expiration_time_str = expiration_time.strftime("%I:%M %p")  # Format as HH:MM AM/PM
+
+        html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f7; text-align: center; padding: 20px;">
+    <div style="max-width: 480px; background: #ffffff; padding: 30px; border-radius: 8px; 
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); margin: auto;">
+        <h1 style="color: #333; font-size: 22px;">Email Verification</h1>
+        <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Hello <strong>{username}</strong>,
+        </p>
+        <p style="color: #555; font-size: 16px;">
+            Use the code below to verify your email address:
+        </p>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin: 20px 0;">
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[0]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[1]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[2]}</div>
+
+            <div style="font-size: 28px; font-weight: bold; color: #333;">-</div>
+
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[3]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[4]}</div>
+            <div style="width: 50px; height: 50px; background: #007bff; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{otp[5]}</div>
+        </div>
+
+        <p style="font-size: 14px; color: #d9534f; font-weight: bold;">
+            OTP Expires at: <strong>{expiration_time_str}</strong>
+        </p>
+
+        <p style="font-size: 12px; color: #888; margin-top: 20px;">
+            If you did not request this, please ignore this email or contact support.
+        </p>
+    </div>
+</body>
+</html>
+"""
+        send_email(sender_email, password, receiver_email, html_template)
+```
+
+---
+
+### **🔹 Explanation of Fix**
+1. **Removed JavaScript Countdown:**  
+   - Emails **don’t support JavaScript**, so it wouldn’t work inside an email.
+
+2. **Added Expiration Time as a Static Text:**  
+   - Used `datetime.now() + timedelta(minutes=10)` to get the expiration time.
+   - Formatted it using `.strftime("%I:%M %p")` to display as **"02:15 PM"**.
+
+3. **Displayed Expiration Time in Email:**  
+   - This makes it **clear to the user** when the OTP will expire.
+
+---
+
+### **✅ Final Features**
+✔ **6-character OTP shown in a box format**  
+✔ **OTP expiration time displayed (e.g., "Expires at 02:15 PM")**  
+✔ **More email-friendly (compatible with all email clients)**  
+
+🚀 Now, your email will **correctly show the OTP with an expiration time** instead of a broken countdown. Let me know if you need further improvements! 😊
+
+
+
+
+Here’s the **forgot password email template** using the same approach as the OTP verification email. This email will contain:  
+
+✅ A **6-character password reset code** displayed in boxes.  
+✅ **Expiration time (10 minutes)** shown as static text.  
+✅ A **responsive email template** that works on all devices.  
+
+---
+
+### **✅ Forgot Password Email Code**
+```python
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import re
+import os
+import random
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
+
+load_dotenv()
+sender_email = os.getenv("SENDER_EMAIL")
+password = os.getenv("EMAIL_PASSWORD")
+
+def validate_email(email):
+    """Validate email format using regex."""
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(email_regex, email)
+
+def send_email(sender_email, password, receiver_email, html_template):
+    """Send an email with HTML content."""
+    msg = MIMEMultipart()
+    msg["From"] = sender_email
+    msg["To"] = receiver_email
+    msg["Subject"] = "Webtech Password Manager - Reset Your Password"
+    msg.attach(MIMEText(html_template, "html"))
+    try:
+        smtp_server = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp_server.starttls()
+        smtp_server.login(sender_email, password)
+        smtp_server.sendmail(sender_email, receiver_email, msg.as_string())
+        print("Password reset email sent successfully!")
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication Error: Please check your email credentials.")
+    except smtplib.SMTPConnectError:
+        print("Connection Error: Unable to connect to the SMTP server.")
+    except Exception as e:
+        print(f"Error: Unable to send email - {str(e)}")
+    finally:
+        smtp_server.quit()
+
+def otp_generator():
+    """Generate a random reset code."""
+    characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    length = 6
+    reset_code = "".join(random.sample(characters, length))
+    return reset_code
+
+if __name__ == "__main__":
+    sender_email = os.getenv("SENDER_EMAIL")
+    password = os.getenv("EMAIL_PASSWORD")
+
+    if not sender_email or not password:
+        print("Error: Please set the environment variables 'SENDER_EMAIL' and 'EMAIL_PASSWORD'.")
+        exit()
+
+    receiver_email = input("Enter receiver email: ").strip()
+
+    if not validate_email(receiver_email):
+        print("Invalid email format. Please try again.")
+    else:
+        reset_code = otp_generator()
+        username = receiver_email.split("@")[0]  # Extract username from email
+
+        # Password reset code expiration time (10 minutes from now)
+        expiration_time = datetime.now() + timedelta(minutes=10)
+        expiration_time_str = expiration_time.strftime("%I:%M %p")  # Format as HH:MM AM/PM
+
+        html_template = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f7; text-align: center; padding: 20px;">
+    <div style="max-width: 480px; background: #ffffff; padding: 30px; border-radius: 8px; 
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); margin: auto;">
+        <h1 style="color: #333; font-size: 22px;">Reset Your Password</h1>
+        <p style="color: #555; font-size: 16px; line-height: 1.6;">
+            Hello <strong>{username}</strong>,
+        </p>
+        <p style="color: #555; font-size: 16px;">
+            Use the code below to reset your password:
+        </p>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin: 20px 0;">
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[0]}</div>
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[1]}</div>
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[2]}</div>
+
+            <div style="font-size: 28px; font-weight: bold; color: #333;">-</div>
+
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[3]}</div>
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[4]}</div>
+            <div style="width: 50px; height: 50px; background: #28a745; color: #ffffff; 
+                        font-size: 24px; font-weight: bold; text-align: center; 
+                        display: flex; justify-content: center; align-items: center; 
+                        border-radius: 8px;">{reset_code[5]}</div>
+        </div>
+
+        <p style="font-size: 14px; color: #d9534f; font-weight: bold;">
+            Reset Code Expires at: <strong>{expiration_time_str}</strong>
+        </p>
+
+        <p style="font-size: 12px; color: #888; margin-top: 20px;">
+            If you did not request this, please ignore this email or contact support.
+        </p>
+    </div>
+</body>
+</html>
+"""
+        send_email(sender_email, password, receiver_email, html_template)
+```
+
+---
+
+### **🔹 Explanation of Fixes & Features**
+1. **Random Reset Code (6 Characters)**  
+   - Generated using `random.sample()`  
+   - Contains **uppercase, lowercase, and numbers**  
+
+2. **Expiration Time (10 Minutes)**
+   - Calculated using `datetime.now() + timedelta(minutes=10)`
+   - Displayed as **"Expires at 02:15 PM"** in the email.
+
+3. **Password Reset Code in Box Format**  
+   - Styled with **green (#28a745)** instead of blue to indicate a reset action.  
+   - **Flexbox layout with spacing** for a professional look.  
+
+4. **Fully Email-Compatible**  
+   - **No JavaScript** (because emails block JS).  
+   - Uses **HTML & inline CSS** (works on Gmail, Outlook, Yahoo, etc.).
+
+---
+
+### **✅ Final Features**
+✔ **6-character password reset code displayed in a box format**  
+✔ **Expiration time clearly shown (e.g., "Expires at 02:15 PM")**  
+✔ **User-friendly, visually appealing email template**  
+✔ **Works on all email clients**  
+
+🚀 Now your password reset emails will look **professional and functional!** Let me know if you need further improvements. 😊
