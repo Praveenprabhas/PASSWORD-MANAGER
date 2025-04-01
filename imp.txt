@@ -173,3 +173,115 @@ Here's an updated schema that addresses this:
 * **User Interface:** Your UI should allow users to add, edit, and delete individual login entries within the `loginEntries` array.
 * **Search and Filtering:** Consider how you will implement search and filtering functionality for the `loginEntries` array. MongoDB's array operators can be very helpful here.
 * **Security:** Continue to follow all the security best practices mentioned in the previous response, especially regarding master password hashing, encryption key derivation, and password encryption.
+
+
+
+
+
+
+With multiple users, the structure remains consistent, but the database will contain multiple documents for each user in both the `users` and `credentials` collections. The `userId` field is what ensures that each user's data is kept separate.
+
+Here's a breakdown of how the structure scales with multiple users:
+
+**1. Users Collection:**
+
+* Each user will have a unique document in the `users` collection.
+* Each document will have a unique `_id` (ObjectId).
+* The `username`, `hashedMasterPassword`, `salt`, `encryptionKey`, and `iv` will be unique to each user.
+
+**2. Credentials Collection:**
+
+* Each user will have one or more documents in the `credentials` collection, depending on how many websites/applications they have saved credentials for.
+* Each document in the `credentials` collection will have a `userId` field that matches the `_id` of the user who owns those credentials.
+* Each `credentials` document can contain multiple login entries within the `loginEntries` array.
+
+**Example with Multiple Users:**
+
+Let's say we have two users, "alice" and "bob":
+
+**Users Collection:**
+
+```json
+[
+  {
+    "_id": ObjectId("661..."), // Alice's user ID
+    "username": "alice",
+    "hashedMasterPassword": "...",
+    "salt": "...",
+    "encryptionKey": BinData(4, "..."),
+    "iv": BinData(4, "..."),
+    "createdAt": ISODate("..."),
+    "updatedAt": ISODate("...")
+  },
+  {
+    "_id": ObjectId("663..."), // Bob's user ID
+    "username": "bob",
+    "hashedMasterPassword": "...",
+    "salt": "...",
+    "encryptionKey": BinData(4, "..."),
+    "iv": BinData(4, "..."),
+    "createdAt": ISODate("..."),
+    "updatedAt": ISODate("...")
+  }
+]
+```
+
+**Credentials Collection:**
+
+```json
+[
+  {
+    "_id": ObjectId("662..."),
+    "userId": ObjectId("661..."), // Alice's user ID
+    "website": "github.com",
+    "loginEntries": [
+      {
+        "username": "alice_github",
+        "encryptedPassword": BinData(4, "..."),
+        "iv": BinData(4, "..."),
+        "notes": "My GitHub account",
+        "createdAt": ISODate("..."),
+        "updatedAt": ISODate("...")
+      }
+    ]
+  },
+  {
+    "_id": ObjectId("664..."),
+    "userId": ObjectId("663..."), // Bob's user ID
+    "website": "google.com",
+    "loginEntries": [
+      {
+        "username": "bob_google",
+        "encryptedPassword": BinData(4, "..."),
+        "iv": BinData(4, "..."),
+        "notes": "Bob's google account",
+        "createdAt": ISODate("..."),
+        "updatedAt": ISODate("...")
+      }
+    ]
+  },
+  {
+    "_id": ObjectId("665..."),
+    "userId": ObjectId("663..."), // Bob's User ID
+    "website": "github.com",
+    "loginEntries": [
+      {
+        "username": "bobs_github",
+        "encryptedPassword": BinData(4, "..."),
+        "iv": BinData(4, "..."),
+        "notes": "Bob's github account",
+        "createdAt": ISODate("..."),
+        "updatedAt": ISODate("...")
+      }
+    ]
+  }
+]
+```
+
+**Key Observations:**
+
+* Each user has their own unique document in the `users` collection.
+* The `credentials` collection contains documents for both Alice and Bob.
+* Bob has two entries in the credentials table.
+* The `userId` field in the `credentials` collection correctly links each credential document to its respective user.
+* This structure allows for efficient data retrieval and ensures that each user's data is isolated and secure.
