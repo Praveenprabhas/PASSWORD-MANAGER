@@ -451,3 +451,130 @@ In this password manager application scenario, using two collections (`users` an
 * The `users` and `credentials` collections provide a clean and efficient way to store and manage your data.
 * This structure ensures security, scalability, and efficient data retrieval.
 * You should not need to create more collections for the purpose of a password manager.
+
+
+
+
+
+Let's outline how you'd perform CRUD (Create, Read, Update, Delete) operations on your MongoDB collections using Python, specifically with the pymongo library.
+Prerequisites:
+Install pymongo: pip install pymongo
+Have a running MongoDB instance.
+Example Python Code (Illustrative):
+
+Python
+
+
+import pymongo
+from bson.objectid import ObjectId
+
+# 1. Connect to MongoDB
+client = pymongo.MongoClient("mongodb://localhost:27017/")  # Replace with your connection string
+db = client["password_manager"]  # Replace with your database name
+users_collection = db["users"]
+credentials_collection = db["credentials"]
+
+# --- User Operations ---
+
+def add_user(username, hashed_master_password, salt, encryption_key, iv):
+    """Adds a new user to the users collection."""
+    user_data = {
+        "username": username,
+        "hashedMasterPassword": hashed_master_password,
+        "salt": salt,
+        "encryptionKey": encryption_key, #BinData
+        "iv": iv, #BinData
+        "createdAt": pymongo.datetime.datetime.utcnow(),
+        "updatedAt": pymongo.datetime.datetime.utcnow(),
+    }
+    result = users_collection.insert_one(user_data)
+    return result.inserted_id
+
+def get_user(user_id):
+    """Retrieves a user by their ID."""
+    return users_collection.find_one({"_id": ObjectId(user_id)})
+
+def update_user(user_id, update_data):
+    """Updates a user's information."""
+    update_data["updatedAt"] = pymongo.datetime.datetime.utcnow()
+    result = users_collection.update_one(
+        {"_id": ObjectId(user_id)}, {"$set": update_data}
+    )
+    return result.modified_count
+
+def delete_user(user_id):
+    """Deletes a user and their credentials."""
+    credentials_collection.delete_many({"userId": ObjectId(user_id)}) #delete users credentials first.
+    result = users_collection.delete_one({"_id": ObjectId(user_id)})
+    return result.deleted_count
+
+# --- Credentials Operations ---
+
+def add_credential(user_id, website, login_entries):
+    """Adds new credentials for a user."""
+    credential_data = {
+        "userId": ObjectId(user_id),
+        "website": website,
+        "loginEntries": login_entries,
+    }
+    result = credentials_collection.insert_one(credential_data)
+    return result.inserted_id
+
+def get_credentials(user_id):
+    """Retrieves credentials for a user."""
+    return credentials_collection.find({"userId": ObjectId(user_id)})
+
+def update_credential(credential_id, update_data):
+    """Updates a credential document."""
+    update_data["loginEntries.$[].updatedAt"] = pymongo.datetime.datetime.utcnow()
+    result = credentials_collection.update_one(
+        {"_id": ObjectId(credential_id)}, {"$set": update_data}
+    )
+    return result.modified_count
+
+def delete_credential(credential_id):
+    """Deletes a credential document."""
+    result = credentials_collection.delete_one({"_id": ObjectId(credential_id)})
+    return result.deleted_count
+
+# Example Usage
+# user_id = add_user("testuser", "hashed_pass", "salt", b"enc_key", b"iv")
+# print(get_user(user_id))
+# update_user(user_id, {"username": "new_user"})
+# delete_user(user_id)
+# credential_id = add_credential(user_id, "example.com", [{"username":"login", "encryptedPassword":b"enc_pass", "iv":b"iv", "notes":"example"}])
+# for credential in get_credentials(user_id):
+#     print(credential)
+# delete_credential(credential_id)
+
+client.close()
+
+
+Explanation:
+Connection:
+Establish a connection to your MongoDB server using pymongo.MongoClient().
+Select the database and collections you'll be working with.
+CRUD Operations:
+Create (Add):
+Use insert_one() to add a single document.
+Use insert_many() to insert multiple documents.
+Read (Get):
+Use find_one() to retrieve a single document.
+Use find() to retrieve multiple documents.
+Update:
+Use update_one() to update a single document.
+Use $set to modify specific fields.
+use $[] to update items within arrays.
+Delete:
+Use delete_one() to delete a single document.
+Use delete_many() to delete multiple documents.
+ObjectIds:
+Use ObjectId() from bson.objectid to work with MongoDB's ObjectId type.
+Error Handling:
+It's crucial to add error handling (e.g., try-except blocks) to your code to handle potential database errors.
+Security:
+Always handle sensitive data (like master passwords) securely.
+Use parameterized queries to prevent SQL injection-like attacks.
+Binary Data:
+Use BinData() to handle binary data such as encryption keys and iv's.
+This example provides a basic foundation. Adapt it to your specific application requirements and add robust error handling and security measures.
