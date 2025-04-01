@@ -23,7 +23,7 @@ class UserDeletion:
 
     def verify(self):
         user_collection = db_name['users']  
-        print("Enter username below to delete that user :-")
+        print("\nEnter username below to delete that user :-")
         username = input("Enter the username: ").strip()
         if not username:
             print("Input cannot be empty. Please enter a valid username.")
@@ -46,10 +46,22 @@ class UserDeletion:
                 print("Incorrect password.")
 
     def manage(self):
-        self.view_users()
-        self.verify()
+        while True:
+            print("\n--- User Deletion Menu ---")
+            print("1. View Users")
+            print("2. Delete User")
+            print("3. Back to Admin Panel")
+            
+            choice = input("Enter your choice: ").strip()
+            
+            if choice == "1":
+                self.view_users()
+            elif choice == "2":
+                self.verify()
+            elif choice == "3":
+                break
+            else:
+                print("Invalid choice. Please select a valid option.")
 
     def __init__(self):
         pass
-
-delete = UserDeletion()

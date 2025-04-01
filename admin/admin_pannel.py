@@ -16,25 +16,28 @@ class AdminPanel:
 
     def show_menu(self):
         while True:
-            print("\n--- Admin Panel ---")
+            print("\n=== Admin Panel ===")
             print("1. View Users")
             print("2. Manage User Deletions")
-            print("3. Exit")
+            print("3. View User Data")
+            print("4. Exit")
 
-            choice = input("Enter your choice: ").strip()
+            choice = input("\nEnter your choice: ").strip()
 
             if choice == "1":
                 self.view_users()
             elif choice == "2":
                 self.manage_user_deletions()
             elif choice == "3":
-                print("Exiting Admin Panel. Goodbye!")
+                self.view_user_data()
+            elif choice == "4":
+                print("\nExiting Admin Panel. Goodbye!")
                 break
             else:
-                print("Invalid choice. Please select a valid option.")
+                print("\nInvalid choice. Please select a valid option.")
 
     def view_users(self):
-        print("\n--- User List ---")
+        print("\n=== User List ===")
         try:
             # Fetch users from the database
             user_collection = db_name['users']
@@ -53,15 +56,48 @@ class AdminPanel:
             print(tabulate(data, headers, tablefmt="grid"))
             print(f"\nTotal Number of Users: {len(data)}")
         except Exception as e:
-            print(f"An error occurred while fetching users: {e}")
+            print(f"\nAn error occurred while fetching users: {e}")
 
     def manage_user_deletions(self):
-        print("\n--- Manage User Deletions ---")
+        print("\n=== Manage User Deletions ===")
         try:
             user_deletion = UserDeletion()  # Instantiate the UserDeletion class
             user_deletion.manage()  # Call the manage method
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"\nAn error occurred: {e}")
+
+    def view_user_data(self):
+        print("\n=== View User Data ===")
+        try:
+            username = input("Enter username to view their data: ").strip()
+            if not username:
+                print("Username cannot be empty.")
+                return
+
+            user_collection = db_name['users']
+            user = user_collection.find_one({"username": username})
+            
+            if user is None:
+                print(f"User '{username}' not found.")
+                return
+
+            if "data" not in user or not user["data"]:
+                print(f"No data found for user '{username}'.")
+                return
+
+            data = []
+            for i, record in enumerate(user["data"], 1):
+                data.append([
+                    i,
+                    record.get("record_id", "N/A"),
+                    record.get("info", "N/A")
+                ])
+
+            headers = ["Sno", "Record ID", "Info"]
+            print(tabulate(data, headers, tablefmt="grid"))
+            print(f"\nTotal Records: {len(data)}")
+        except Exception as e:
+            print(f"\nAn error occurred while fetching user data: {e}")
 
 
 if __name__ == "__main__":
